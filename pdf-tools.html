@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PDF Tools - CHABALAB</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+  </script>
+</head>
+<body>
+  <div id="header"></div>
+
+  <main class="container">
+    <h1>PDF to PNG Converter</h1>
+    <div class="upload-zone" id="drop-zone">
+      ลากไฟล์ PDF มาวางที่นี่
+      <input type="file" id="pdf-file" accept=".pdf" />
+    </div>
+
+    <div id="preview-container" class="hidden">
+      <div class="controls">
+        <button id="zoom-out">-</button>
+        <span id="page-info">หน้า 1/1</span>
+        <button id="zoom-in">+</button>
+      </div>
+      <canvas id="pdf-canvas"></canvas>
+      <div class="progress-bar"><div id="progress-fill">0%</div></div>
+      <button id="convert-btn" class="hidden">แปลงเป็น PNG</button>
+    </div>
+
+    <div id="result" class="hidden"></div>
+  </main>
+
+  <script src="assets/js/menu.js"></script>
+  <script src="assets/js/pdf.js"></script>
+</body>
+</html>

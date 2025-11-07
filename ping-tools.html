@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Network Test - CHABALAB</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <div id="header"></div>
+
+  <main class="container">
+    <h1>Network Test</h1>
+    <p>กดปุ่มเดียว ตรวจทุกอย่างสำหรับเกมออนไลน์</p>
+    <button id="start-test" class="big-btn">เริ่มทดสอบทันที</button>
+
+    <div id="test-steps" class="hidden">
+      <div class="step" data-step="ip"><span>1. ตรวจ IP</span><span class="status">รอ...</span></div>
+      <div class="step" data-step="dns"><span>2. ตรวจ DNS</span><span class="status">รอ...</span></div>
+      <div class="step" data-step="speed"><span>3. วัดความเร็ว</span><span class="status">รอ...</span></div>
+      <div class="step" data-step="ping"><span>4. ทดสอบ Ping</span><span class="status">รอ...</span></div>
+      <div class="progress-bar"><div id="progress-fill">0%</div></div>
+    </div>
+
+    <div id="result" class="hidden">
+      <div id="summary"></div>
+      <button id="share-banner" class="big-btn">แชร์เป็น Banner PNG</button>
+      <div id="ping-table"></div>
+    </div>
+  </main>
+
+  <script src="assets/js/menu.js"></script>
+  <script src="assets/js/tools.js"></script>
+</body>
+</html>

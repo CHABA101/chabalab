@@ -56,7 +56,10 @@ async function testIP() {
     const data = await res.json();
     results.ip = data.ip;
     updateStep('ip', 'สำเร็จ');
-  } catch { results.ip = 'ไม่พบ'; updateStep('ip', 'ล้มเหลว'); }
+  } catch { 
+    results.ip = 'ไม่พบ'; 
+    updateStep('ip', 'ล้มเหลว'); 
+  }
   updateProgress();
 }
 
@@ -79,12 +82,20 @@ async function testPingAll() {
   const pings = {};
   let done = 0;
 
-  await Promise.all(gameServers.map(async (s) => {
-    const key = `${s.game} ${s.region}`;
-    pings[key] = await pingServer(s.host);
-    done++;
-    updateStep('ping', `กำลังทดสอบ 30 เซิฟ... (${done}/30)`);
-  }));
+  // แบ่งกลุ่ม 10 ตัว → Ping พร้อมกัน
+  const chunks = [];
+  for (let i = 0; i < gameServers.length; i += 10) {
+    chunks.push(gameServers.slice(i, i + 10));
+  }
+
+  for (const chunk of chunks) {
+    await Promise.all(chunk.map(async (s) => {
+      const key = `${s.game} ${s.region}`;
+      pings[key] = await pingServer(s.host);
+      done++;
+      updateStep('ping', `กำลังทดสอบ... (${done}/30)`);
+    }));
+  }
 
   results.ping = pings;
   const validPings = Object.values(pings).map(v => parseInt(v) || 9999).filter(n => n < 9999);
@@ -96,16 +107,22 @@ async function testPingAll() {
   updateProgress();
 }
 
-// ใช้ fetch + HEAD → แม่นยำ + ไม่ค้าง
+// Timeout 2 วินาที
 async function pingServer(host) {
   const start = performance.now();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 2000);
+
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 3000);
-    await fetch(`https://${host}`, { method: 'HEAD', signal: controller.signal, mode: 'no-cors' });
+    await fetch(`https://${host}`, {
+      method: 'HEAD',
+      mode: 'no-cors',
+      signal: controller.signal
+    });
     clearTimeout(timeout);
     return `${Math.round(performance.now() - start)}ms`;
   } catch {
+    clearTimeout(timeout);
     return 'Timeout';
   }
 }
@@ -210,14 +227,16 @@ function generateBanner() {
   const maskedIP = results.ip ? results.ip.split('.').map((_, i) => i < 2 ? _ : 'xxx').join('.') : 'ไม่พบ';
   ctx.font = '16px system-ui';
   ctx.fillText(`IP: ${maskedIP}`, 20, 70);
-  ctx.fillText(`↓${results.speed.download} ↑${results.speed.upload} Mbps`, 20, 95);
+  ctx.fillText(`${results.speed.download} ${results.speed.upload} Mbps`, 20, 95);
   ctx.fillText(`${results.latency} ms | ${results.jitter} ms | ${results.packetLoss}`, 20, 120);
   ctx.fillText(best.server, 20, 145);
 
   canvas.toBlob(blob => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = `chabalab-test-${new Date().toISOString().slice(0,10)}.png`;
-    a.click(); URL.revokeObjectURL(url);
+    a.href = url; 
+    a.download = `chabalab-test-${new Date().toISOString().slice(0,10)}.png`;
+    a.click(); 
+    URL.revokeObjectURL(url);
   });
 }

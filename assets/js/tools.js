@@ -26,12 +26,12 @@ const gameServers = [
   { game: "EA", region: "AU", host: "34.87.241.2" },
   { game: "EA", region: "EU", host: "35.186.224.2" },
   { game: "EA", region: "US", host: "107.182.233.169" },
-  { game: "DISCORD", region: "SG", host: "discord-sg.discord.gg" },
-  { game: "DISCORD", region: "HK", host: "discord-hk.discord.gg" },
-  { game: "DISCORD", region: "JP", host: "discord-jp.discord.gg" },
-  { game: "DISCORD", region: "AU", host: "discord-au.discord.gg" },
-  { game: "DISCORD", region: "EU", host: "discord-eu.discord.gg" },
-  { game: "DISCORD", region: "US", host: "discord.com" }
+  { game: "DISCORD", region: "SG", host: "162.159.135.233" },
+  { game: "DISCORD", region: "HK", host: "162.159.136.233" },
+  { game: "DISCORD", region: "JP", host: "162.159.137.233" },
+  { game: "DISCORD", region: "AU", host: "162.159.138.233" },
+  { game: "DISCORD", region: "EU", host: "162.159.134.233" },
+  { game: "DISCORD", region: "US", host: "162.159.130.233" }
 ];
 
 document.getElementById('start-test').onclick = startAllTests;
@@ -75,14 +75,20 @@ async function testBandwidth() {
 }
 
 async function testPingAll() {
-  updateStep('ping', `กำลังทดสอบ ${gameServers.length} เซิฟ...`);
+  updateStep('ping', 'กำลังทดสอบ 30 เซิฟ...');
   const pings = {};
-  for (const s of gameServers) {
+  let done = 0;
+
+  await Promise.all(gameServers.map(async (s) => {
     const key = `${s.game} ${s.region}`;
     pings[key] = await pingServer(s.host);
-  }
+    done++;
+    updateStep('ping', `กำลังทดสอบ 30 เซิฟ... (${done}/30)`);
+  }));
+
   results.ping = pings;
-  results.latency = Math.min(...Object.values(pings).map(v => parseInt(v) || 9999));
+  const validPings = Object.values(pings).map(v => parseInt(v) || 9999).filter(n => n < 9999);
+  results.latency = validPings.length ? Math.min(...validPings) : 9999;
   results.jitter = await measureJitter();
   results.packetLoss = await measurePacketLoss();
   results.traceroute = Math.floor(Math.random() * 8) + 3;
@@ -90,23 +96,26 @@ async function testPingAll() {
   updateProgress();
 }
 
-function pingServer(host) {
-  return new Promise(resolve => {
-    const start = performance.now();
-    const img = new Image();
-    img.onload = img.onerror = () => {
-      const latency = Math.round(performance.now() - start);
-      resolve(latency < 999 ? `${latency}ms` : 'Timeout');
-    };
-    img.src = `https://${host}/favicon.ico?t=` + start;
-    setTimeout(() => resolve('Timeout'), 5000);
-  });
+// ใช้ fetch + HEAD → แม่นยำ + ไม่ค้าง
+async function pingServer(host) {
+  const start = performance.now();
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
+    await fetch(`https://${host}`, { method: 'HEAD', signal: controller.signal, mode: 'no-cors' });
+    clearTimeout(timeout);
+    return `${Math.round(performance.now() - start)}ms`;
+  } catch {
+    return 'Timeout';
+  }
 }
 
 async function measureJitter() {
   const pings = await Promise.all(Array(10).fill().map(() => pingServer(gameServers[0].host)));
   const nums = pings.map(p => parseInt(p) || 9999).filter(n => n < 9999);
-  return nums.length > 1 ? Math.round(nums.slice(1).reduce((a,b) => a + Math.abs(b - nums[0]), 0) / (nums.length - 1)) : 0;
+  if (nums.length < 2) return 0;
+  const avg = nums.reduce((a, b) => a + b, 0) / nums.length;
+  return Math.round(nums.reduce((a, b) => a + Math.abs(b - avg), 0) / nums.length);
 }
 
 async function measurePacketLoss() {
@@ -114,16 +123,20 @@ async function measurePacketLoss() {
   for (let i = 0; i < 20; i++) {
     if (await pingServer(gameServers[0].host) === 'Timeout') lost++;
   }
-  return (lost / 20 * 100).toFixed(1) + '%';
+  return ((lost / 20) * 100).toFixed(1) + '%';
 }
 
 async function measureBandwidth() {
   const url = 'https://httpbin.org/bytes/10485760'; // 10MB
   const start = performance.now();
-  await fetch(url);
-  const duration = (performance.now() - start) / 1000;
-  const download = (83.88608 / duration).toFixed(1);
-  return { download, upload: (download * 0.5).toFixed(1) };
+  try {
+    await fetch(url);
+    const duration = (performance.now() - start) / 1000;
+    const download = (83.88608 / duration).toFixed(1);
+    return { download, upload: (download * 0.5).toFixed(1) };
+  } catch {
+    return { download: 'N/A', upload: 'N/A' };
+  }
 }
 
 async function getDNS() {
@@ -197,7 +210,7 @@ function generateBanner() {
   const maskedIP = results.ip ? results.ip.split('.').map((_, i) => i < 2 ? _ : 'xxx').join('.') : 'ไม่พบ';
   ctx.font = '16px system-ui';
   ctx.fillText(`IP: ${maskedIP}`, 20, 70);
-  ctx.fillText(`${results.speed.download} ${results.speed.upload} Mbps`, 20, 95);
+  ctx.fillText(`↓${results.speed.download} ↑${results.speed.upload} Mbps`, 20, 95);
   ctx.fillText(`${results.latency} ms | ${results.jitter} ms | ${results.packetLoss}`, 20, 120);
   ctx.fillText(best.server, 20, 145);
 
